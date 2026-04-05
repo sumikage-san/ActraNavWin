@@ -1,7 +1,9 @@
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Text.Json;
 using System.Windows;
+using Microsoft.Web.WebView2.Core;
 
 namespace ActraNavWin
 {
@@ -12,30 +14,75 @@ namespace ActraNavWin
     /// </summary>
     public partial class MainWindow : Window
     {
+        /// <summary>
+        /// アプリ全体で共有する WebView2 Environment（仕様 §15: 必須）。
+        /// 全 WebView が同一ブラウザプロセスとキャッシュを使うことで、
+        /// メモリ削減と安定化を実現する。
+        /// 将来の Panel 化や別 Window（Worklog等）でもこの Environment を渡す。
+        /// </summary>
+        private CoreWebView2Environment? _sharedEnv;
+
         public MainWindow()
         {
             InitializeComponent();
             // Loaded イベントで初期化することで、ウィンドウ描画完了後に
             // WebView2 の非同期初期化を安全に実行できる
             Loaded += MainWindow_Loaded;
+            Closing += MainWindow_Closing;
         }
 
         private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
             var config = LoadConfig();
 
+            // Environment はアプリ起動時に1回だけ生成し、フィールドに保持する。
+            // 今後 Panel 追加や別 Window 生成時にも _sharedEnv を渡すだけで済む。
+            // 既に生成済みの場合は再生成しない（将来の再初期化シナリオへの備え）。
+            _sharedEnv ??= await CoreWebView2Environment.CreateAsync();
+
+            // Environment 生成失敗時は WebView を初期化できないため、ここで中断する。
+            // 将来 Window 追加や Panel 動的生成で呼び出し経路が増えた場合の安全弁。
+            if (_sharedEnv is null)
+            {
+                Debug.WriteLine("WebView2 Environment の生成に失敗しました。WebView を初期化できません。");
+                return;
+            }
+
             // 各 WebView2 を順番に初期化する。
-            // EnsureCoreWebView2Async はランタイム環境のセットアップを伴うため、
-            // 並列実行ではなく順番に await して安定性を確保する。
-            await webView1.EnsureCoreWebView2Async(null);
-            await webView2.EnsureCoreWebView2Async(null);
-            await webView3.EnsureCoreWebView2Async(null);
+            // 共有 Environment を渡すことで同一ブラウザプロセスを使い回す。
+            await webView1.EnsureCoreWebView2Async(_sharedEnv);
+            await webView2.EnsureCoreWebView2Async(_sharedEnv);
+            await webView3.EnsureCoreWebView2Async(_sharedEnv);
 
             // 現時点では3画面とも同じ baseUrl を表示する。
             // 将来的にはパネルごとに異なるURLや役割を割り当てる想定。
             webView1.CoreWebView2.Navigate(config.BaseUrl);
             webView2.CoreWebView2.Navigate(config.BaseUrl);
             webView3.CoreWebView2.Navigate(config.BaseUrl);
+        }
+
+        /// <summary>
+        /// WebView2 リソースの明示的な解放。
+        /// WebView2 は内部でブラウザプロセス（msedgewebview2.exe）を保持しており、
+        /// Window の Close だけでは即座に解放されない場合がある。
+        /// 現在は MainWindow で一括管理しているが、Panel 化後は各 Panel の責務に移行する。
+        /// </summary>
+        private void MainWindow_Closing(object? sender, CancelEventArgs e)
+        {
+            // ?. を使う理由：現在は XAML 定義のため null にならないが、
+            // 将来 Panel 化で動的生成に変わると未初期化のまま Close される可能性がある。
+            // try-catch の理由：Closing 中の未処理例外はアプリ終了をブロックするため、
+            // Dispose 失敗でも確実に終了できるよう保護する。
+            try
+            {
+                webView1?.Dispose();
+                webView2?.Dispose();
+                webView3?.Dispose();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"WebView2 Dispose 中にエラー: {ex.Message}");
+            }
         }
 
         /// <summary>
