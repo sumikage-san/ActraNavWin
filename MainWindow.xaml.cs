@@ -54,11 +54,34 @@ namespace ActraNavWin
             await webView2.EnsureCoreWebView2Async(_sharedEnv);
             await webView3.EnsureCoreWebView2Async(_sharedEnv);
 
-            // 現時点では3画面とも同じ baseUrl を表示する。
-            // 将来的にはパネルごとに異なるURLや役割を割り当てる想定。
-            webView1.CoreWebView2.Navigate(config.BaseUrl);
-            webView2.CoreWebView2.Navigate(config.BaseUrl);
-            webView3.CoreWebView2.Navigate(config.BaseUrl);
+            // WebView 番号ではなく「役割名」でURLを割り当てる。
+            // config.json の panels キー（left/center/right）が画面の役割定義になる。
+            NavigatePanel(webView1, config, "left");
+            NavigatePanel(webView2, config, "center");
+            NavigatePanel(webView3, config, "right");
+        }
+
+        /// <summary>
+        /// 役割名に対応する URL を config から取得し、WebView に設定する。
+        /// panels キーの欠落や不正な URL でもアプリが落ちないようガードする。
+        /// </summary>
+        private static void NavigatePanel(
+            Microsoft.Web.WebView2.Wpf.WebView2 webView, AppConfig config, string role)
+        {
+            if (!config.Panels.TryGetValue(role, out var panel) || string.IsNullOrWhiteSpace(panel.Url))
+            {
+                Debug.WriteLine($"panels[\"{role}\"] が未定義または URL が空のため、スキップします。");
+                return;
+            }
+
+            try
+            {
+                webView.CoreWebView2.Navigate(panel.Url);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"panels[\"{role}\"] の URL 設定に失敗: {ex.Message}");
+            }
         }
 
         /// <summary>
