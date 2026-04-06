@@ -3,11 +3,11 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
         xmlns:local="clr-namespace:ActraNavWin"
         mc:Ignorable="d"
         Title="ActraNavWin" Height="720" Width="1280">
     <!-- 役割ベースの3画面レイアウト: Left(Work) : Center(Main) : Right(Support) = 1:2:1 -->
+    <!-- WebView2 は XAML に直接配置せず、Panel が InitializeAsync で動的に差し込む -->
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="1*" />
@@ -16,18 +16,12 @@
         </Grid.ColumnDefinitions>
 
         <!-- Left: Work（入力系） -->
-        <Border Grid.Column="0" Background="#F5F5F5" BorderBrush="#20000000" BorderThickness="0,0,1,0">
-            <wv2:WebView2 x:Name="webView1" />
-        </Border>
+        <Border x:Name="borderLeft" Grid.Column="0" Background="#F5F5F5" BorderBrush="#20000000" BorderThickness="0,0,1,0" />
 
         <!-- Center: Main（主役）— 白背景で左右との差を出し、視覚的な主役を明示 -->
-        <Border Grid.Column="1" Background="White">
-            <wv2:WebView2 x:Name="webView2" />
-        </Border>
+        <Border x:Name="borderCenter" Grid.Column="1" Background="White" />
 
         <!-- Right: Support（補助） -->
-        <Border Grid.Column="2" Background="#F5F5F5" BorderBrush="#20000000" BorderThickness="1,0,0,0">
-            <wv2:WebView2 x:Name="webView3" />
-        </Border>
+        <Border x:Name="borderRight" Grid.Column="2" Background="#F5F5F5" BorderBrush="#20000000" BorderThickness="1,0,0,0" />
     </Grid>
 </Window>
