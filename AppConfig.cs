@@ -17,6 +17,7 @@ namespace ActraNavWin
     public class AppConfig
     {
         public string Mode { get; set; } = "legacy";
+        public string BaseUrl { get; set; } = "http://localhost/company-wide/html/Actra";
         public Dictionary<string, PanelConfig> Panels { get; set; } = new();
     }
 }

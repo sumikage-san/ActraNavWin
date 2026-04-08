@@ -1,5 +1,6 @@
 {
   "mode": "legacy",
+  "baseUrl": "http://actraworklog/company-wide/html/Actra",
   "panels": {
     "left": {
       "url": "https://www.google.com"

@@ -35,6 +35,8 @@ namespace ActraNavWin
 
         private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
+            txtStaffName.Text = AppSession.CurrentUser?.StaffName ?? "";
+
             var config = LoadConfig();
 
             // Panel 生成・登録：XAML の Border コンテナと役割を紐づける。
@@ -76,7 +78,7 @@ namespace ActraNavWin
         /// ファイル未配置やパースエラー時はデフォルト値で動作を継続する。
         /// これにより、config.json が無くてもアプリが起動できることを保証する。
         /// </summary>
-        private static AppConfig LoadConfig()
+        internal static AppConfig LoadConfig()
         {
             // 実行ディレクトリ基準で探索する。開発時（bin/Debug）と
             // 配布時（インストール先）のどちらでも同じ挙動になる
