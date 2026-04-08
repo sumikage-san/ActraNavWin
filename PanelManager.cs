@@ -46,7 +46,8 @@ namespace ActraNavWin
 
                 if (config.Panels.TryGetValue(key, out var panelConfig))
                 {
-                    panel.Navigate(panelConfig.Url);
+                    var url = panelConfig.Url.Replace("{baseUrl}", config.BaseUrl.TrimEnd('/'));
+                    panel.Navigate(url);
                 }
                 else
                 {

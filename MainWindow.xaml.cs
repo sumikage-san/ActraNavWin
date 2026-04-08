@@ -35,31 +35,43 @@ namespace ActraNavWin
 
         private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
-            txtStaffName.Text = AppSession.CurrentUser?.StaffName ?? "";
-
-            var config = LoadConfig();
-
-            // Panel 生成・登録：XAML の Border コンテナと役割を紐づける。
-            // WebView は Panel.InitializeAsync で動的に生成・差し込みされる。
-            _panelManager.Register(new Panel(PanelRole.Left, borderLeft));
-            _panelManager.Register(new Panel(PanelRole.Center, borderCenter));
-            _panelManager.Register(new Panel(PanelRole.Right, borderRight));
-
-            // Environment はアプリ起動時に1回だけ生成し、フィールドに保持する。
-            // 既に生成済みの場合は再生成しない（将来の再初期化シナリオへの備え）。
-            _sharedEnv ??= await CoreWebView2Environment.CreateAsync();
-
-            // Environment 生成失敗時は Panel を初期化できないため、ここで中断する。
-            if (_sharedEnv is null)
+            try
             {
-                Debug.WriteLine("WebView2 Environment の生成に失敗しました。Panel を初期化できません。");
-                return;
-            }
+                txtStaffName.Text = AppSession.CurrentUser?.StaffName ?? "";
 
-            // 全 Panel の WebView2 を共有 Environment で初期化し、
-            // config.json の panels 設定に基づいて URL を割り当てる。
-            await _panelManager.InitializeAllAsync(_sharedEnv);
-            _panelManager.NavigateAll(config);
+                var config = LoadConfig();
+
+                // Panel 生成・登録：XAML の Border コンテナと役割を紐づける。
+                _panelManager.Register(new Panel(PanelRole.Left, borderLeft));
+                _panelManager.Register(new Panel(PanelRole.Center, borderCenter));
+                _panelManager.Register(new Panel(PanelRole.Right, borderRight));
+
+                // Environment はアプリ起動時に1回だけ生成し、フィールドに保持する。
+                _sharedEnv ??= await CoreWebView2Environment.CreateAsync();
+
+                if (_sharedEnv is null)
+                {
+                    Debug.WriteLine("WebView2 Environment の生成に失敗しました。");
+                    return;
+                }
+
+                // 全 Panel の WebView2 を共有 Environment で初期化し、URL を割り当てる。
+                await _panelManager.InitializeAllAsync(_sharedEnv);
+
+                // Center パネルにログインページ読み込み完了時の自動ログインを設定
+                var center = _panelManager.Get(PanelRole.Center);
+                if (center?.WebView?.CoreWebView2 != null)
+                {
+                    center.WebView.CoreWebView2.NavigationCompleted += CenterWebView_NavigationCompleted;
+                }
+
+                _panelManager.NavigateAll(config);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"初期化エラー:\n{ex}", "MainWindow エラー",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         /// <summary>
@@ -68,9 +80,49 @@ namespace ActraNavWin
         /// Window の Close だけでは即座に解放されない場合がある。
         /// PanelManager.DisposeAll() により全 Panel の Dispose を一括実行する。
         /// </summary>
+        private bool _autoLoginDone;
+
+        private async void CenterWebView_NavigationCompleted(object? sender, CoreWebView2NavigationCompletedEventArgs e)
+        {
+            if (_autoLoginDone || !e.IsSuccess) return;
+
+            var staffCode = AppSession.CurrentUser?.StaffCode;
+            if (string.IsNullOrEmpty(staffCode)) return;
+
+            var center = _panelManager.Get(PanelRole.Center);
+            if (center == null) return;
+
+            // ログインフォーム（id="loginForm"）が存在するページでのみ実行
+            var escaped = staffCode.Replace("'", "\\'");
+            var script = $@"
+                (function() {{
+                    var form = document.getElementById('loginForm');
+                    if (!form) return 'no_form';
+                    var input = document.getElementById('userId');
+                    if (!input) return 'no_input';
+                    window.actraStaffCode = '{escaped}';
+                    if (typeof window.autoLogin === 'function') {{
+                        window.autoLogin('{escaped}');
+                    }} else {{
+                        input.value = '{escaped}';
+                        form.submit();
+                    }}
+                    return 'ok';
+                }})();";
+
+            var result = await center.ExecuteScriptAsync(script);
+            Debug.WriteLine($"AutoLogin result: {result}");
+
+            if (result?.Contains("ok") == true)
+            {
+                _autoLoginDone = true;
+            }
+        }
+
         private void MainWindow_Closing(object? sender, CancelEventArgs e)
         {
             _panelManager.DisposeAll();
+            Application.Current.Shutdown();
         }
 
         /// <summary>

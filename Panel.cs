@@ -72,6 +72,24 @@ namespace ActraNavWin
             }
         }
 
+        /// <summary>
+        /// WebView 上で JavaScript を実行する。
+        /// </summary>
+        public async Task<string?> ExecuteScriptAsync(string script)
+        {
+            if (!IsInitialized) return null;
+
+            try
+            {
+                return await WebView!.CoreWebView2.ExecuteScriptAsync(script);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Panel[{Role}]: ExecuteScript 失敗 — {ex.Message}");
+                return null;
+            }
+        }
+
         public void SetVisible(bool visible)
         {
             Container.Visibility = visible

@@ -6,16 +6,26 @@ namespace ActraNavWin
     {
         private void Application_Startup(object sender, StartupEventArgs e)
         {
-            var config = ActraNavWin.MainWindow.LoadConfig();
-            var login = new StaffCodeWindow(config);
+            try
+            {
+                var config = ActraNavWin.MainWindow.LoadConfig();
+                var login = new StaffCodeWindow(config);
 
-            if (login.ShowDialog() == true)
-            {
-                var main = new MainWindow();
-                main.Show();
+                if (login.ShowDialog() == true)
+                {
+                    var main = new MainWindow();
+                    MainWindow = main;
+                    main.Show();
+                }
+                else
+                {
+                    Shutdown();
+                }
             }
-            else
+            catch (Exception ex)
             {
+                MessageBox.Show($"起動エラー:\n{ex}", "ActraNavWin エラー",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
                 Shutdown();
             }
         }
