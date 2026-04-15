@@ -1,23 +1,53 @@
 namespace ActraNavWin
 {
-    /// <summary>
-    /// 各パネルの設定。URL により表示コンテンツを決定する。
-    /// 将来 Panel クラス化した際に、そのまま Panel の初期化パラメータとして使える構造。
-    /// </summary>
-    public class PanelConfig
+    public class QrConfig
     {
-        public string Url { get; set; } = "";
+        public string Ip { get; set; } = "";
+        public string Location { get; set; } = "";
+        public string Protocol { get; set; } = "http";
+        public int? Version { get; set; }
     }
 
-    /// <summary>
-    /// config.json のルート構造。
-    /// mode は legacy／nexus の切替に使用する（現時点では保持のみ）。
-    /// panels は役割名（left/center/right）をキーとしたパネル設定の辞書。
-    /// </summary>
+    public class UrlEntry
+    {
+        public string Name { get; set; } = "";
+        public string Url { get; set; } = "";
+        public bool IsDefault { get; set; }
+
+        public override string ToString() => Name;
+    }
+
+    public class SlideConfig
+    {
+        public string Edge { get; set; } = "right";
+        public double Position { get; set; } = 0.5;
+    }
+
     public class AppConfig
     {
-        public string Mode { get; set; } = "legacy";
-        public string BaseUrl { get; set; } = "http://localhost/company-wide/html/Actra";
-        public Dictionary<string, PanelConfig> Panels { get; set; } = new();
+        public bool IsInitialized { get; set; }
+        public QrConfig? Qr { get; set; }
+        public SlideConfig Slide { get; set; } = new();
+        public string ApiBaseUrl { get; set; } = "";
+        public string DefaultUrl { get; set; } = "";
+        public List<UrlEntry> UrlList { get; set; } = new();
+
+        /// <summary>
+        /// QR 設定から URL 群を生成して自身のフィールドに反映する。
+        /// </summary>
+        public void ApplyQrConfig()
+        {
+            if (Qr == null) return;
+
+            var baseUrl = $"{Qr.Protocol}://{Qr.Ip}/company-wide/html/Actra";
+            ApiBaseUrl = baseUrl;
+            DefaultUrl = $"{baseUrl}/worklog/view/index_main.php";
+
+            UrlList = new List<UrlEntry>
+            {
+                new() { Name = "Worklog", Url = $"{baseUrl}/worklog/view/index_main.php", IsDefault = true },
+                new() { Name = "管理画面", Url = $"{baseUrl}/worklog/manage/index_main.php" }
+            };
+        }
     }
 }

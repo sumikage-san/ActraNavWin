@@ -1,26 +1,25 @@
+using System.Diagnostics;
 using System.Windows;
 
 namespace ActraNavWin
 {
     public partial class App : Application
     {
-        private void Application_Startup(object sender, StartupEventArgs e)
+        private MainWindow? _main;
+        private SlideWindow? _slide;
+
+        protected override void OnStartup(StartupEventArgs e)
         {
+            base.OnStartup(e);
+
             try
             {
-                var config = ActraNavWin.MainWindow.LoadConfig();
-                var login = new StaffCodeWindow(config);
+                _main = new MainWindow();
 
-                if (login.ShowDialog() == true)
-                {
-                    var main = new MainWindow();
-                    MainWindow = main;
-                    main.Show();
-                }
-                else
-                {
-                    Shutdown();
-                }
+                _slide = new SlideWindow(_main);
+                _slide.Show();
+
+                Debug.WriteLine("SlideWindow started");
             }
             catch (Exception ex)
             {
@@ -28,6 +27,12 @@ namespace ActraNavWin
                     MessageBoxButton.OK, MessageBoxImage.Error);
                 Shutdown();
             }
+        }
+
+        protected override void OnExit(ExitEventArgs e)
+        {
+            _main?.ForceClose();
+            base.OnExit(e);
         }
     }
 }

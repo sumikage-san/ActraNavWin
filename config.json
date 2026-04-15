@@ -1,15 +1,3 @@
 {
-  "mode": "legacy",
-  "baseUrl": "http://actraworklog/company-wide/html/Actra",
-  "panels": {
-    "left": {
-      "url": "https://www.google.com"
-    },
-    "center": {
-      "url": "{baseUrl}/worklog/view/index_main.php"
-    },
-    "right": {
-      "url": "http://worklog.actra/ui/v2/login.html"
-    }
-  }
+  "isInitialized": false
 }
